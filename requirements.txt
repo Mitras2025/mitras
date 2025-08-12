@@ -1,0 +1,7 @@
+google-genai==0.1.0
+psycopg2-binary
+pgvector
+sqlalchemy
+pandas
+tqdm
+python-dotenv
