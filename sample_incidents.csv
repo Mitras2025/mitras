@@ -1,0 +1,4 @@
+﻿incident_id,category,description,impact,environment
+INC001,Network,Router down,High,Production
+INC002,Application,Login failure,Medium,Staging
+INC003,Database,Slow queries,High,Production
