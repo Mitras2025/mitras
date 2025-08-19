@@ -25,7 +25,11 @@ from google import genai
 load_dotenv()
 
 DB_URL = os.getenv(
-    "DB_URL", "postgresql://pguser:pgpass@localhost:5432/incidentsdb")
+    "DATABASE_URL",  # Render convention
+    # fallback
+    os.getenv("DB_URL", "postgresql://pguser:pgpass@localhost:5432/incidentsdb")
+)
+
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-gecko-001")
 GENERATION_MODEL = os.getenv("GENERATION_MODEL", "gemini-2.5-pro")
 TOP_K = int(os.getenv("TOP_K", "6"))
