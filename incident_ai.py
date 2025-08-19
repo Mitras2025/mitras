@@ -31,10 +31,13 @@ GENERATION_MODEL = os.getenv("GENERATION_MODEL", "gemini-2.5-pro")
 TOP_K = int(os.getenv("TOP_K", "6"))
 MAX_CHUNK_TOKENS = int(os.getenv("MAX_CHUNK_TOKENS", "400"))
 
-# ✅ Initialize GenAI client using service account JSON
-# The client will automatically read GOOGLE_APPLICATION_CREDENTIALS
-client = genai.Client()
-
+# ✅ Initialize GenAI client using Vertex AI
+# It will automatically use GOOGLE_APPLICATION_CREDENTIALS
+client = genai.Client(
+    vertexai=True,
+    project="mitras-469413",
+    location="us-central1"
+)
 # ---------- helpers ----------
 
 
