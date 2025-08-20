@@ -11,6 +11,8 @@ from tqdm import tqdm
 from typing import List
 from io import StringIO
 import requests
+import json
+from google import genai
 
 from sqlalchemy import create_engine, text
 from google import genai
@@ -30,7 +32,19 @@ TOP_K = int(os.getenv("TOP_K", "6"))
 MAX_CHUNK_TOKENS = int(os.getenv("MAX_CHUNK_TOKENS", "400"))
 
 # GenAI client
-client = genai.Client(vertexai=True, project="mitras-469413", location="us-central1")
+cred_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+if cred_json:
+    import io
+    with open("/tmp/gcloud_sa.json", "w") as f:
+        f.write(cred_json)
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/gcloud_sa.json"
+
+# Initialize GenAI client
+client = genai.Client(
+    vertexai=True,
+    project="mitras-469413",
+    location="us-central1"
+)
 
 # ---------- helpers ----------
 def chunk_text(text: str, max_tokens: int = 400) -> List[str]:
