@@ -7,6 +7,7 @@ incident_ai.py
 - Call Gemini to produce structured JSON recommendation
 """
 
+import chunk_text, embed_texts, upsert_segment, MAX_CHUNK_TOKENS
 import os
 import json
 import textwrap
@@ -16,7 +17,7 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 from io import StringIO
 import requests
-from .incident_ai import chunk_text, embed_texts, upsert_segment, MAX_CHUNK_TOKENS
+
 
 # DB
 from sqlalchemy import create_engine, text
