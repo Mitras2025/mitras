@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from sqlalchemy import create_engine
+from . import incident_ai
 import os
 import json
 from incident_ai import (
