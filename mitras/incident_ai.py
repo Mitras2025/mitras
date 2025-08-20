@@ -14,6 +14,7 @@ from typing import List
 import pandas as pd
 from tqdm import tqdm
 from dotenv import load_dotenv
+from . import incident_ai
 
 # DB
 from sqlalchemy import create_engine, text
