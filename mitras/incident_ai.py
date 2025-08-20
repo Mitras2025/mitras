@@ -16,6 +16,7 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 from io import StringIO
 import requests
+from .incident_ai import chunk_text, embed_texts, upsert_segment, MAX_CHUNK_TOKENS
 
 # DB
 from sqlalchemy import create_engine, text
@@ -152,40 +153,47 @@ def build_prompt(current_incident: dict, retrieved: List[dict]) -> str:
 # ---------- ingestion ----------
 
 
-def ingest_csv(csv_path_or_url: str, engine):
-    # If it's a URL, fetch it
-    if csv_path_or_url.startswith("http"):
-        try:
-            response = requests.get(csv_path_or_url)
-            response.raise_for_status()
-            csv_file_like = StringIO(response.text)
-        except Exception as e:
-            raise FileNotFoundError(f"CSV file not found or inaccessible: {csv_path_or_url}") from e
+def ingest_csv(csv_path: str, engine):
+    """
+    Ingest incidents from a CSV file (local path or URL) into the database.
+    """
+    # --- Load CSV ---
+    if csv_path.startswith("http://") or csv_path.startswith("https://"):
+        response = requests.get(csv_path)
+        if response.status_code != 200:
+            raise FileNotFoundError(f"CSV file not found at URL: {csv_path}")
+        csv_file = StringIO(response.text)
     else:
-        # Local file path
-        if not os.path.exists(csv_path_or_url):
-            raise FileNotFoundError(f"CSV file not found: {csv_path_or_url}")
-        csv_file_like = csv_path_or_url
+        if not os.path.exists(csv_path):
+            raise FileNotFoundError(f"CSV file not found: {csv_path}")
+        csv_file = csv_path
 
-    # Read CSV
-    df = pd.read_csv(csv_file_like, sep=";")
+    df = pd.read_csv(csv_file, sep=";")
     if df.empty:
-        raise ValueError(f"No data found in CSV file: {csv_path_or_url}")
+        raise ValueError(f"No data found in CSV file: {csv_path}")
 
-    # Process rows
+    # --- Process rows ---
     for idx, row in tqdm(df.iterrows(), total=len(df)):
         incident_id = str(row.get("incident_id") or f"row_{idx}")
+
+        # Combine text fields for embedding
         full_text = " ".join([
             str(row.get("description", "") or ""),
             str(row.get("root_cause", "") or ""),
             str(row.get("resolution", "") or ""),
         ]).strip()
         if not full_text:
-            continue
+            continue  # skip empty rows
+
+        # Chunk text for embeddings
         chunks = chunk_text(full_text, max_tokens=MAX_CHUNK_TOKENS)
         if not chunks:
             continue
+
+        # Generate embeddings
         embeddings = embed_texts(chunks)
+
+        # Upsert chunks into DB
         for chunk, emb in zip(chunks, embeddings):
             metadata = {
                 "category": row.get("category"),
@@ -193,6 +201,8 @@ def ingest_csv(csv_path_or_url: str, engine):
                 "date": str(row.get("date")),
             }
             upsert_segment(engine, incident_id, chunk, metadata, emb)
+
+    print(f"✅ Successfully ingested CSV: {csv_path}")
 
 # ---------- realtime query pipeline ----------
 
