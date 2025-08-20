@@ -14,7 +14,8 @@ from typing import List
 import pandas as pd
 from tqdm import tqdm
 from dotenv import load_dotenv
-from . import incident_ai
+from io import StringIO
+import requests
 
 # DB
 from sqlalchemy import create_engine, text
@@ -151,12 +152,27 @@ def build_prompt(current_incident: dict, retrieved: List[dict]) -> str:
 # ---------- ingestion ----------
 
 
-def ingest_csv(csv_path: str, engine):
-    if not os.path.exists(csv_path):
-        raise FileNotFoundError(f"CSV file not found: {csv_path}")
-    df = pd.read_csv(csv_path, sep=";")
+def ingest_csv(csv_path_or_url: str, engine):
+    # If it's a URL, fetch it
+    if csv_path_or_url.startswith("http"):
+        try:
+            response = requests.get(csv_path_or_url)
+            response.raise_for_status()
+            csv_file_like = StringIO(response.text)
+        except Exception as e:
+            raise FileNotFoundError(f"CSV file not found or inaccessible: {csv_path_or_url}") from e
+    else:
+        # Local file path
+        if not os.path.exists(csv_path_or_url):
+            raise FileNotFoundError(f"CSV file not found: {csv_path_or_url}")
+        csv_file_like = csv_path_or_url
+
+    # Read CSV
+    df = pd.read_csv(csv_file_like, sep=";")
     if df.empty:
-        raise ValueError(f"No data found in CSV file: {csv_path}")
+        raise ValueError(f"No data found in CSV file: {csv_path_or_url}")
+
+    # Process rows
     for idx, row in tqdm(df.iterrows(), total=len(df)):
         incident_id = str(row.get("incident_id") or f"row_{idx}")
         full_text = " ".join([
@@ -165,7 +181,7 @@ def ingest_csv(csv_path: str, engine):
             str(row.get("resolution", "") or ""),
         ]).strip()
         if not full_text:
-            continue  # skip empty rows
+            continue
         chunks = chunk_text(full_text, max_tokens=MAX_CHUNK_TOKENS)
         if not chunks:
             continue
